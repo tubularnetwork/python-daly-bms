@@ -53,31 +53,32 @@ class DalyBMSBluetooth(DalyBMS):
         await self.client.disconnect()
         self.logger.info("Bluetooth Disconnected")
 
-    async def _read_request(self, command, max_responses=1):
-        response_data = None
-        x = None
-        for x in range(0, self.request_retries):
-            response_data = await self._read(
-                command=command,
-                max_responses=max_responses)
-            if not response_data:
-                self.logger.debug("%x. try failed, retrying..." % (x + 1))
-                await asyncio.sleep(0.2)
-            else:
-                break
-        if not response_data:
-            self.logger.error('%s failed after %s tries' % (command, x + 1))
-            return False
-        return response_data
+    # async def _read_request(self, command, extra="", max_responses=1):
+    #     response_data = None
+    #     x = None
+    #     for x in range(0, self.request_retries):
+    #         response_data = await self._read(
+    #             command=command,
+    #             extra=extra,
+    #             max_responses=max_responses)
+    #         if not response_data:
+    #             self.logger.debug("%x. try failed, retrying..." % (x + 1))
+    #             await asyncio.sleep(0.2)
+    #         else:
+    #             break
+    #     if not response_data:
+    #         self.logger.error('%s failed after %s tries' % (command, x + 1))
+    #         return False
+    #     return response_data
 
-    async def _read(self, command, max_responses=1):
+    async def _read(self, command, extra="", max_responses=1, return_list=False):
         self.logger.debug("-- %s ------------------------" % command)
         self.response_cache[command] = {"queue": [],
                                         "future": asyncio.Future(),
                                         "max_responses": max_responses,
                                         "done": False}
 
-        message_bytes = self._format_message(command)
+        message_bytes = self._format_message(command, extra=extra)
         result = await self._async_char_write(command, message_bytes)
         self.logger.debug("got %s" % result)
         if not result:
