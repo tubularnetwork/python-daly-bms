@@ -53,12 +53,13 @@ class DalyBMSBluetooth(DalyBMS):
         await self.client.disconnect()
         self.logger.info("Bluetooth Disconnected")
 
-    async def _read_request(self, command, max_responses=1):
+    async def _read_request(self, command, extra="", max_responses=1):
         response_data = None
         x = None
         for x in range(0, self.request_retries):
             response_data = await self._read(
                 command=command,
+                extra=extra,
                 max_responses=max_responses)
             if not response_data:
                 self.logger.debug("%x. try failed, retrying..." % (x + 1))
@@ -70,14 +71,14 @@ class DalyBMSBluetooth(DalyBMS):
             return False
         return response_data
 
-    async def _read(self, command, max_responses=1):
+    async def _read(self, command, extra="", max_responses=1, return_list=False):
         self.logger.debug("-- %s ------------------------" % command)
         self.response_cache[command] = {"queue": [],
                                         "future": asyncio.Future(),
                                         "max_responses": max_responses,
                                         "done": False}
 
-        message_bytes = self._format_message(command)
+        message_bytes = self._format_message(command, extra=extra)
         result = await self._async_char_write(command, message_bytes)
         self.logger.debug("got %s" % result)
         if not result:
@@ -178,3 +179,14 @@ class DalyBMSBluetooth(DalyBMS):
             "balancing_status": await self.get_balancing_status(),
             "errors": await self.get_errors()
         }
+
+    async def set_charge_mosfet(self, on=True, response_data=None):
+        if on:
+            extra = "01"
+        else:
+            extra = "00"
+        if not response_data:
+            response_data = await self._read_request("da", extra=extra)
+        if not response_data:
+            return False
+        self.logger.info(response_data.hex())
